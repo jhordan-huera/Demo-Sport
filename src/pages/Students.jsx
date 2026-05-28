@@ -42,6 +42,7 @@ export default function Students() {
   const [formCategory, setFormCategory] = useState('');
   const [formRepresentative, setFormRepresentative] = useState('');
   const [formPhone, setFormPhone] = useState('');
+  const [formFee, setFormFee] = useState('');
 
   const categories = currentSchool?.categories || [];
 
@@ -143,6 +144,7 @@ export default function Students() {
     setFormCategory(categories[0]?.id || '');
     setFormRepresentative('');
     setFormPhone('');
+    setFormFee(String(categories[0]?.fee || currentSchool?.baseFee || 25));
     setShowModal(true);
   };
 
@@ -153,6 +155,8 @@ export default function Students() {
     setFormCategory(student.categoryId);
     setFormRepresentative(student.representative);
     setFormPhone(student.phone);
+    const cat = categories.find(c => c.id === student.categoryId);
+    setFormFee(String(student.customFee ?? cat?.fee ?? currentSchool?.baseFee ?? 25));
     setShowModal(true);
   };
 
@@ -166,6 +170,7 @@ export default function Students() {
         categoryId: formCategory,
         representative: formRepresentative,
         phone: formPhone,
+        customFee: parseFloat(formFee) || undefined,
       });
     } else {
       addStudent({
@@ -174,6 +179,7 @@ export default function Students() {
         categoryId: formCategory,
         representative: formRepresentative,
         phone: formPhone,
+        customFee: parseFloat(formFee) || undefined,
       });
     }
     setShowModal(false);
@@ -459,17 +465,39 @@ export default function Students() {
               onChange={e => setFormAge(e.target.value)}
             />
           </div>
+        </div>
+        <div className="form-row">
           <div className="form-group">
             <label>Categoría</label>
             <select
               className="form-select"
               value={formCategory}
-              onChange={e => setFormCategory(e.target.value)}
+              onChange={e => {
+                setFormCategory(e.target.value);
+                // Auto-update fee to match new category if not custom-edited
+                const newCat = categories.find(c => c.id === e.target.value);
+                if (newCat) setFormFee(String(newCat.fee || currentSchool?.baseFee || 25));
+              }}
             >
               {categories.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+          </div>
+          <div className="form-group">
+            <label>Mensualidad ($)</label>
+            <input
+              className="form-input"
+              type="number"
+              min="0"
+              step="0.50"
+              placeholder="Mensualidad"
+              value={formFee}
+              onChange={e => setFormFee(e.target.value)}
+            />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Base categoría: ${categories.find(c => c.id === formCategory)?.fee || currentSchool?.baseFee || '—'}
+            </span>
           </div>
         </div>
         <div className="form-group">

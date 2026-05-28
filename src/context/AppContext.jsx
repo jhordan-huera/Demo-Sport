@@ -14,6 +14,7 @@ const MOCK_SCHOOLS = [
     address: 'Av. Principal 123, Ibarra',
     primaryColor: '#1B73E8',
     secondaryColor: '#0D47A1',
+    baseFee: 25,
     categories: [
       { id: 'sub8', name: 'Sub-8', fee: 20, color: '#0891B2', trainingDays: ['Lun', 'Mié'], trainingStart: '15:00', trainingEnd: '16:30' },
       { id: 'sub10', name: 'Sub-10', fee: 25, color: '#1B73E8', trainingDays: ['Mar', 'Jue'], trainingStart: '15:00', trainingEnd: '16:30' },
@@ -33,6 +34,7 @@ const MOCK_SCHOOLS = [
     address: 'Calle Bolívar 456, Otavalo',
     primaryColor: '#FF6B35',
     secondaryColor: '#FFD740',
+    baseFee: 30,
     categories: [
       { id: 'mini', name: 'Mini (6-8)', fee: 25, color: '#0891B2', trainingDays: ['Lun', 'Mié', 'Vie'], trainingStart: '15:00', trainingEnd: '16:30' },
       { id: 'infantil', name: 'Infantil (9-11)', fee: 30, color: '#D96716', trainingDays: ['Mar', 'Jue'], trainingStart: '15:00', trainingEnd: '16:30' },

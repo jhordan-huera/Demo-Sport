@@ -45,7 +45,7 @@ export default function Payments() {
     activeStudents.forEach(s => {
       const p = payments[s.id]?.['2026-05'];
       const cat = categories.find(c => c.id === s.categoryId);
-      const fee = cat?.fee || 25;
+      const fee = s.customFee ?? cat?.fee ?? 25;
       totalCount++;
 
       if (p?.status === 'paid') {
@@ -101,7 +101,7 @@ export default function Payments() {
   if (selectedStudent) {
     const student = selectedStudent;
     const cat = categories.find(c => c.id === student.categoryId);
-    const fee = cat?.fee || 25;
+    const fee = student.customFee ?? cat?.fee ?? 25;
 
     return (
       <div>
@@ -367,7 +367,7 @@ export default function Payments() {
                       >
                         {getInitials(student.name)}
                       </div>
-                      <span style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
                         {student.name}
                       </span>
                     </div>
@@ -377,7 +377,7 @@ export default function Payments() {
                       {cat?.name || student.categoryId}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 600 }}>${cat?.fee || 25}</td>
+                  <td style={{ fontWeight: 600 }}>${student.customFee ?? cat?.fee ?? 25}</td>
                   <td>
                     <span className={`badge badge--${statusClasses[currentStatus]}`}>
                       {statusLabels[currentStatus]}
@@ -433,7 +433,7 @@ export default function Payments() {
                   {getInitials(student.name)}
                 </div>
                 <div className="payment-card__info">
-                  <div className="payment-card__name" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                  <div className="payment-card__name" style={{ color: 'var(--accent-primary)' }}>
                     {student.name}
                   </div>
                   <span className="badge badge--info" style={cat ? { background: `${cat.color}20`, color: cat.color, fontSize: '0.65rem', padding: '2px 6px' } : {}}>
@@ -447,7 +447,7 @@ export default function Payments() {
               <div className="payment-card__details">
                 <div className="payment-card__row">
                   <span className="payment-card__label">Mensualidad</span>
-                  <span className="payment-card__value">${cat?.fee || 25}</span>
+                  <span className="payment-card__value">${student.customFee ?? cat?.fee ?? 25}</span>
                 </div>
               </div>
               {payStatus === 'paid' ? (

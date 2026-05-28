@@ -29,6 +29,7 @@ export default function Settings() {
   const [phone, setPhone] = useState(currentSchool?.phone || '');
   const [primaryColor, setPrimaryColor] = useState(currentSchool?.primaryColor || '#1B73E8');
   const [secondaryColor, setSecondaryColor] = useState(currentSchool?.secondaryColor || '#0D47A1');
+  const [baseFee, setBaseFee] = useState(String(currentSchool?.baseFee || 25));
   const [categories, setCategories] = useState(
     (currentSchool?.categories || []).map(c => ({ ...c, trainingDays: c.trainingDays || [], trainingStart: c.trainingStart || '16:00', trainingEnd: c.trainingEnd || '18:00' }))
   );
@@ -98,6 +99,7 @@ export default function Settings() {
       phone,
       primaryColor,
       secondaryColor,
+      baseFee: parseFloat(baseFee) || 25,
       categories,
     });
   };
@@ -149,13 +151,29 @@ export default function Settings() {
                 onChange={e => setAddress(e.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label>Teléfono de Contacto</label>
-              <input
-                className="form-input"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <label>Teléfono de Contacto</label>
+                <input
+                  className="form-input"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>💰 Mensualidad Base ($)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  value={baseFee}
+                  onChange={e => setBaseFee(e.target.value)}
+                />
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Valor por defecto para nuevos estudiantes
+                </span>
+              </div>
             </div>
           </div>
         </div>
