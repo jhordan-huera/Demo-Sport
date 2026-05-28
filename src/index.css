@@ -1158,6 +1158,15 @@ ul, ol { list-style: none; }
   box-shadow: 0 0 8px var(--accent-primary-glow);
 }
 
+.calendar__day--selected {
+  border: 2px solid var(--accent-primary) !important;
+  background: var(--accent-primary) !important;
+  color: #fff !important;
+  font-weight: 800;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(27, 115, 232, 0.35);
+}
+
 /* ===== Toggle Switch ===== */
 .toggle { position: relative; width: 52px; height: 28px; cursor: pointer; }
 .toggle input { opacity: 0; width: 0; height: 0; }

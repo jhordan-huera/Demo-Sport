@@ -24,6 +24,7 @@ export default function Attendance() {
   const [selectedCategory, setSelectedCategory] = useState(urlCategory || 'all');
   const [selectedDate, setSelectedDate] = useState('2026-05-27');
   const [rollCall, setRollCall] = useState({});
+  const [selectedCalDay, setSelectedCalDay] = useState(null);
 
   // Sync filter with URL param when navigating from sidebar
   useEffect(() => {
@@ -256,36 +257,147 @@ export default function Attendance() {
       )}
 
       {activeTab === 'calendar' && (
-        <div className="card card--no-hover" style={{ maxWidth: '500px' }}>
-          <div className="card__title">📅 Mayo 2026 — Asistencia General</div>
-          <div className="calendar">
-            {dayHeaders.map(d => (
-              <div className="calendar__day-header" key={d}>{d}</div>
-            ))}
-            {calendarDays.map((cell, idx) => (
-              <div
-                key={idx}
-                className={`calendar__day calendar__day--${cell.type}${cell.isToday ? ' calendar__day--today' : ''}`}
-              >
-                {cell.day}
+        <div style={{ display: 'flex', gap: 'var(--space-lg)', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div className="card card--no-hover" style={{ flex: '1 1 320px', maxWidth: '500px' }}>
+            <div className="card__title">📅 Mayo 2026 — Asistencia General</div>
+            <div className="calendar">
+              {dayHeaders.map(d => (
+                <div className="calendar__day-header" key={d}>{d}</div>
+              ))}
+              {calendarDays.map((cell, idx) => {
+                const isClickable = cell.day && cell.type !== 'empty' && cell.type !== 'no-class' && cell.day <= 27;
+                const isSelected = selectedCalDay === cell.dateKey;
+                return (
+                  <div
+                    key={idx}
+                    className={`calendar__day calendar__day--${cell.type}${cell.isToday ? ' calendar__day--today' : ''}${isSelected ? ' calendar__day--selected' : ''}`}
+                    style={isClickable ? { cursor: 'pointer' } : undefined}
+                    onClick={() => isClickable && setSelectedCalDay(isSelected ? null : cell.dateKey)}
+                  >
+                    {cell.day}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-lg)', marginTop: 'var(--space-lg)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--color-success-bg)', border: '1px solid rgba(0,230,118,0.3)' }} />
+                Buena asistencia
               </div>
-            ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--color-danger-bg)', border: '1px solid rgba(255,82,82,0.3)' }} />
+                Baja asistencia
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--bg-tertiary)' }} />
+                Sin clase
+              </div>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 'var(--space-sm)' }}>
+              Haz clic en un día con clase para ver el detalle
+            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-lg)', marginTop: 'var(--space-lg)', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--color-success-bg)', border: '1px solid rgba(0,230,118,0.3)' }} />
-              Buena asistencia
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--color-danger-bg)', border: '1px solid rgba(255,82,82,0.3)' }} />
-              Baja asistencia
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--bg-tertiary)' }} />
-              Sin clase
-            </div>
-          </div>
+          {/* Day Detail Panel */}
+          {selectedCalDay && (() => {
+            const dayMap = { 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6, 'Dom': 0 };
+            const dateObj = new Date(selectedCalDay + 'T12:00:00');
+            const dayOfWeek = dateObj.getDay();
+            const dayLabel = dateObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+            // Students that trained on this day
+            const studentsForDay = filteredStudents.filter(s => {
+              const sCat = (currentSchool?.categories || []).find(c => c.id === s.categoryId);
+              const sDayNums = (sCat?.trainingDays || []).map(dd => dayMap[dd]);
+              return sDayNums.includes(dayOfWeek);
+            });
+
+            const presentStudents = studentsForDay.filter(s => attendance[s.id]?.[selectedCalDay] === true);
+            const absentStudents = studentsForDay.filter(s => attendance[s.id]?.[selectedCalDay] !== true);
+
+            return (
+              <div className="card card--no-hover" style={{ flex: '1 1 300px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+                  <div>
+                    <div className="card__title" style={{ textTransform: 'capitalize', marginBottom: '2px' }}>📋 {dayLabel}</div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {presentStudents.length}/{studentsForDay.length} presentes
+                    </span>
+                  </div>
+                  <button className="btn btn--secondary btn--sm" onClick={() => setSelectedCalDay(null)}>✕</button>
+                </div>
+
+                {studentsForDay.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No hubo estudiantes programados este día
+                  </div>
+                ) : (
+                  <>
+                    {/* Present */}
+                    {presentStudents.length > 0 && (
+                      <div style={{ marginBottom: 'var(--space-md)' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                          ✅ Presentes ({presentStudents.length})
+                        </div>
+                        {presentStudents.map(s => {
+                          const sCat = (currentSchool?.categories || []).find(c => c.id === s.categoryId);
+                          return (
+                            <div key={s.id} style={{
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                              background: '#f0fdf4', marginBottom: '4px',
+                              borderLeft: '3px solid #059669',
+                            }}>
+                              <div className="table__avatar" style={{ background: getAvatarColor(s.name), width: 28, height: 28, fontSize: '0.6rem', flexShrink: 0 }}>
+                                {getInitials(s.name)}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{s.name}</div>
+                              </div>
+                              <span className="badge badge--info" style={sCat ? { background: `${sCat.color}20`, color: sCat.color, fontSize: '0.6rem', padding: '2px 6px' } : {}}>
+                                {sCat?.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Absent */}
+                    {absentStudents.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-danger)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                          ❌ Ausentes ({absentStudents.length})
+                        </div>
+                        {absentStudents.map(s => {
+                          const sCat = (currentSchool?.categories || []).find(c => c.id === s.categoryId);
+                          return (
+                            <div key={s.id} style={{
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                              background: '#fef2f2', marginBottom: '4px',
+                              borderLeft: '3px solid #DC2626',
+                            }}>
+                              <div className="table__avatar" style={{ background: getAvatarColor(s.name), width: 28, height: 28, fontSize: '0.6rem', flexShrink: 0 }}>
+                                {getInitials(s.name)}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{s.name}</div>
+                              </div>
+                              <span className="badge badge--info" style={sCat ? { background: `${sCat.color}20`, color: sCat.color, fontSize: '0.6rem', padding: '2px 6px' } : {}}>
+                                {sCat?.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
