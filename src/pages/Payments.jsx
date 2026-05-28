@@ -127,10 +127,11 @@ export default function Payments() {
         <div className="stat-card">
           <div className="stat-card__header">
             <div className="stat-card__icon stat-card__icon--cyan">📊</div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mayo 2026</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-            <div className="circular-progress">
-              <svg width="64" height="64" viewBox="0 0 64 64">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginTop: 'var(--space-sm)' }}>
+            <div className="circular-progress" style={{ flexShrink: 0 }}>
+              <svg width="56" height="56" viewBox="0 0 64 64">
                 <circle className="circular-progress__bg" cx="32" cy="32" r="26" />
                 <circle
                   className="circular-progress__fill"
@@ -142,13 +143,11 @@ export default function Payments() {
                   strokeDashoffset={dashOffset}
                 />
               </svg>
-              <div className="circular-progress__text">{financialSummary.collectionRate}%</div>
+              <div className="circular-progress__text" style={{ fontSize: '0.75rem' }}>{financialSummary.collectionRate}%</div>
             </div>
             <div>
+              <div className="stat-card__value" style={{ fontSize: '1.5rem' }}>{financialSummary.collectionRate}%</div>
               <div className="stat-card__label">Tasa de Cobro</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Mayo 2026
-              </div>
             </div>
           </div>
         </div>
@@ -170,8 +169,8 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* Payments Table */}
-      <div className="table-container">
+      {/* Payments Table — Desktop */}
+      <div className="table-container payments-desktop">
         <table className="table">
           <thead>
             <tr>
@@ -185,6 +184,8 @@ export default function Payments() {
           <tbody>
             {filteredStudents.map(student => {
               const cat = categories.find(c => c.id === student.categoryId);
+              const currentStatus = payments[student.id]?.['2026-05']?.status || 'pending';
+              const isPaid = currentStatus === 'paid';
 
               return (
                 <tr key={student.id}>
@@ -218,12 +219,16 @@ export default function Payments() {
                   <td style={{ fontWeight: 600 }}>${cat?.fee || 25}</td>
                   <td>
                     <div className="table__actions">
-                      <button
-                        className="btn btn--sm btn--secondary"
-                        onClick={() => openPaymentModal(student.id, '2026-05')}
-                      >
-                        💳 Registrar
-                      </button>
+                      {isPaid ? (
+                        <span className="badge badge--success" style={{ fontSize: '0.7rem' }}>✅ Pagado</span>
+                      ) : (
+                        <button
+                          className="btn btn--sm btn--secondary"
+                          onClick={() => openPaymentModal(student.id, '2026-05')}
+                        >
+                          💳 Registrar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -231,6 +236,75 @@ export default function Payments() {
             })}
           </tbody>
         </table>
+        {filteredStudents.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-state__icon">💰</div>
+            <div className="empty-state__title">Sin resultados</div>
+            <div className="empty-state__text">No hay estudiantes con el filtro seleccionado</div>
+          </div>
+        )}
+      </div>
+
+      {/* Payments Cards — Mobile */}
+      <div className="payments-mobile">
+        {filteredStudents.map(student => {
+          const cat = categories.find(c => c.id === student.categoryId);
+          const currentPayment = payments[student.id]?.['2026-05'];
+          const payStatus = currentPayment?.status || 'pending';
+
+          return (
+            <div className="payment-card" key={student.id} style={payStatus === 'paid' ? { borderLeft: '3px solid var(--color-success)' } : payStatus === 'overdue' ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
+              <div className="payment-card__header">
+                <div
+                  className="table__avatar"
+                  style={{ background: getAvatarColor(student.name), width: 36, height: 36, fontSize: '0.7rem' }}
+                >
+                  {getInitials(student.name)}
+                </div>
+                <div className="payment-card__info">
+                  <div className="payment-card__name">{student.name}</div>
+                  <span className="badge badge--info" style={cat ? { background: `${cat.color}20`, color: cat.color, fontSize: '0.65rem', padding: '2px 6px' } : {}}>
+                    {cat?.name || student.categoryId}
+                  </span>
+                </div>
+                <span className={`badge badge--${statusClasses[payStatus]}`}>
+                  {statusLabels[payStatus]}
+                </span>
+              </div>
+              <div className="payment-card__details">
+                <div className="payment-card__row">
+                  <span className="payment-card__label">Mensualidad</span>
+                  <span className="payment-card__value">${cat?.fee || 25}</span>
+                </div>
+                {payStatus === 'paid' && currentPayment && (
+                  <div className="payment-card__row">
+                    <span className="payment-card__label">Método</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{currentPayment.method}</span>
+                  </div>
+                )}
+                {payStatus === 'paid' && currentPayment && (
+                  <div className="payment-card__row">
+                    <span className="payment-card__label">Fecha</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentPayment.date}</span>
+                  </div>
+                )}
+              </div>
+              {payStatus === 'paid' ? (
+                <div style={{ width: '100%', marginTop: 'var(--space-sm)', textAlign: 'center', padding: '8px', background: 'var(--color-success-light)', borderRadius: 'var(--radius-md)', color: 'var(--color-success)', fontWeight: 700, fontSize: '0.8rem' }}>
+                  ✅ Pago Registrado
+                </div>
+              ) : (
+                <button
+                  className="btn btn--sm btn--primary"
+                  onClick={() => openPaymentModal(student.id, '2026-05')}
+                  style={{ width: '100%', marginTop: 'var(--space-sm)' }}
+                >
+                  💳 Registrar Pago
+                </button>
+              )}
+            </div>
+          );
+        })}
         {filteredStudents.length === 0 && (
           <div className="empty-state">
             <div className="empty-state__icon">💰</div>

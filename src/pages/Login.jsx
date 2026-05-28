@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Login() {
-  const { login, mockSchools } = useApp();
+  const { login, mockSchools, mockCoaches } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -92,7 +92,7 @@ export default function Login() {
         </form>
 
         <div className="login-card__demo">
-          <p className="login-card__demo-title">Credenciales Demo</p>
+          <p className="login-card__demo-title">👔 Credenciales Director</p>
           <div className="login-card__demo-grid">
             {mockSchools.map(school => (
               <div
@@ -105,6 +105,24 @@ export default function Login() {
                 <div className="demo-credential__info">
                   {school.email}<br />
                   {school.password}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="login-card__demo-title" style={{ marginTop: '16px' }}>🏋️ Credenciales Entrenador</p>
+          <div className="login-card__demo-grid">
+            {mockCoaches.slice(0, 2).map(coach => (
+              <div
+                key={coach.id}
+                className="demo-credential"
+                onClick={() => fillCredentials(coach.email, coach.password)}
+              >
+                <div className="demo-credential__icon">🏋️</div>
+                <div className="demo-credential__name">{coach.name}</div>
+                <div className="demo-credential__info">
+                  {coach.email}<br />
+                  {coach.password}
                 </div>
               </div>
             ))}

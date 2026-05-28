@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 
@@ -16,12 +16,21 @@ function getAvatarColor(name) {
 }
 
 export default function Students() {
-  const { students, currentSchool, addStudent, updateStudent, toggleStudentActive, payments, attendance } = useApp();
+  const { students, currentSchool, addStudent, updateStudent, toggleStudentActive, payments, attendance, userRole, currentUser } = useApp();
+  const isCoach = userRole === 'coach';
+  const coachCategories = currentUser?.assignedCategories || [];
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlCategory = searchParams.get('category');
 
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCategory, setFilterCategory] = useState(urlCategory || 'all');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Sync filter with URL param when navigating from sidebar
+  useEffect(() => {
+    setFilterCategory(urlCategory || 'all');
+  }, [urlCategory]);
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [sortColumn, setSortColumn] = useState(null);
@@ -38,6 +47,8 @@ export default function Students() {
 
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
+      // Coaches only see their assigned categories
+      if (isCoach && !coachCategories.includes(s.categoryId)) return false;
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.representative.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = filterCategory === 'all' || s.categoryId === filterCategory;
@@ -46,7 +57,7 @@ export default function Students() {
         (filterStatus === 'inactive' && !s.active);
       return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [students, search, filterCategory, filterStatus]);
+  }, [students, search, filterCategory, filterStatus, isCoach, coachCategories]);
 
   const getPaymentStatus = (studentId) => {
     const p = payments[studentId]?.['2026-05'];
@@ -179,9 +190,11 @@ export default function Students() {
           <h1 className="page-header__title">Estudiantes</h1>
           <p className="page-header__date">{students.filter(s => s.active).length} activos · {students.length} total</p>
         </div>
-        <button className="btn btn--primary" onClick={openCreateModal}>
-          ➕ Nuevo Estudiante
-        </button>
+        {!isCoach && (
+          <button className="btn btn--primary" onClick={openCreateModal}>
+            ➕ Nuevo Estudiante
+          </button>
+        )}
       </div>
 
       {/* Search & Filters */}
@@ -221,8 +234,8 @@ export default function Students() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-container">
+      {/* Table — Desktop */}
+      <div className="table-container students-desktop">
         <table className="table">
           <thead>
             <tr>
@@ -238,9 +251,11 @@ export default function Students() {
               <th className="th--sortable" onClick={() => handleSort('phone')}>
                 Teléfono <SortIcon column="phone" />
               </th>
-              <th className="th--sortable" onClick={() => handleSort('payment')}>
-                Pago <SortIcon column="payment" />
-              </th>
+              {!isCoach && (
+                <th className="th--sortable" onClick={() => handleSort('payment')}>
+                  Pago <SortIcon column="payment" />
+                </th>
+              )}
               <th className="th--sortable" onClick={() => handleSort('attendance')}>
                 Asistencia <SortIcon column="attendance" />
               </th>
@@ -278,11 +293,13 @@ export default function Students() {
                   </td>
                   <td>{student.representative}</td>
                   <td>{student.phone}</td>
-                  <td>
-                    <span className={`badge badge--${statusClasses[payStatus]}`}>
-                      {statusLabels[payStatus]}
-                    </span>
-                  </td>
+                  {!isCoach && (
+                    <td>
+                      <span className={`badge badge--${statusClasses[payStatus]}`}>
+                        {statusLabels[payStatus]}
+                      </span>
+                    </td>
+                  )}
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: '36px' }}>{attRate}%</span>
@@ -303,20 +320,24 @@ export default function Students() {
                       >
                         👤
                       </button>
-                      <button
-                        className="btn btn--icon btn--ghost"
-                        title="Editar"
-                        onClick={() => openEditModal(student)}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="btn btn--icon btn--ghost"
-                        title={student.active ? 'Desactivar' : 'Activar'}
-                        onClick={() => toggleStudentActive(student.id)}
-                      >
-                        {student.active ? '🚫' : '✅'}
-                      </button>
+                      {!isCoach && (
+                        <>
+                          <button
+                            className="btn btn--icon btn--ghost"
+                            title="Editar"
+                            onClick={() => openEditModal(student)}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn btn--icon btn--ghost"
+                            title={student.active ? 'Desactivar' : 'Activar'}
+                            onClick={() => toggleStudentActive(student.id)}
+                          >
+                            {student.active ? '🚫' : '✅'}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -329,6 +350,75 @@ export default function Students() {
             <div className="empty-state__icon">🔍</div>
             <div className="empty-state__title">Sin resultados</div>
             <div className="empty-state__text">No se encontraron estudiantes con los filtros aplicados</div>
+          </div>
+        )}
+      </div>
+
+      {/* Cards — Mobile */}
+      <div className="students-mobile">
+        {sortedStudents.map(student => {
+          const cat = categories.find(c => c.id === student.categoryId);
+          const payStatus = getPaymentStatus(student.id);
+          const attRate = getAttendanceRate(student.id);
+
+          return (
+            <div className="student-card" key={student.id} style={{ opacity: student.active ? 1 : 0.5 }}>
+              <div className="student-card__header">
+                <div
+                  className="table__avatar"
+                  style={{ background: getAvatarColor(student.name), width: 40, height: 40, fontSize: '0.75rem' }}
+                >
+                  {getInitials(student.name)}
+                </div>
+                <div className="student-card__info">
+                  <div className="student-card__name">{student.name}</div>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className="badge badge--info" style={cat ? { background: `${cat.color}20`, color: cat.color, fontSize: '0.65rem', padding: '2px 6px' } : {}}>
+                      {cat?.name || student.categoryId}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{student.age} años</span>
+                  </div>
+                </div>
+                {!isCoach && (
+                  <span className={`badge badge--${statusClasses[payStatus]}`} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
+                    {statusLabels[payStatus]}
+                  </span>
+                )}
+              </div>
+              <div className="student-card__body">
+                <div className="student-card__row">
+                  <span className="student-card__label">📞 {student.phone}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{attRate}%</span>
+                    <div className="progress-bar" style={{ width: '50px' }}>
+                      <div
+                        className={`progress-bar__fill ${attRate >= 80 ? 'progress-bar__fill--green' : attRate >= 60 ? 'progress-bar__fill--yellow' : 'progress-bar__fill--blue'}`}
+                        style={{ width: `${attRate}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="student-card__actions">
+                <button className="btn btn--sm btn--secondary" onClick={() => navigate(`/students/${student.id}`)} style={{ flex: 1 }}>
+                  👤 Ver Perfil
+                </button>
+                {!isCoach && (
+                  <button className="btn btn--sm btn--ghost" onClick={() => openEditModal(student)}>✏️</button>
+                )}
+                {!isCoach && (
+                  <button className="btn btn--sm btn--ghost" onClick={() => toggleStudentActive(student.id)}>
+                    {student.active ? '🚫' : '✅'}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {filteredStudents.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-state__icon">🔍</div>
+            <div className="empty-state__title">Sin resultados</div>
           </div>
         )}
       </div>

@@ -29,36 +29,28 @@ export default function Settings() {
   const [phone, setPhone] = useState(currentSchool?.phone || '');
   const [primaryColor, setPrimaryColor] = useState(currentSchool?.primaryColor || '#1B73E8');
   const [secondaryColor, setSecondaryColor] = useState(currentSchool?.secondaryColor || '#0D47A1');
-  const [trainingDays, setTrainingDays] = useState(currentSchool?.trainingDays || []);
-  const [trainingStart, setTrainingStart] = useState(currentSchool?.trainingStart || '16:00');
-  const [trainingEnd, setTrainingEnd] = useState(currentSchool?.trainingEnd || '18:00');
-  const [categories, setCategories] = useState(currentSchool?.categories || []);
+  const [categories, setCategories] = useState(
+    (currentSchool?.categories || []).map(c => ({ ...c, trainingDays: c.trainingDays || [], trainingStart: c.trainingStart || '16:00', trainingEnd: c.trainingEnd || '18:00' }))
+  );
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryFee, setNewCategoryFee] = useState('');
 
-  // ===== LIVE COLOR PREVIEW: update CSS variables in real-time as user picks colors =====
-  useEffect(() => {
-    const root = document.documentElement;
-    const { r, g, b } = hexToRgb(primaryColor);
-    const { r: sr, g: sg, b: sb } = hexToRgb(secondaryColor);
-
-    root.style.setProperty('--accent-primary', primaryColor);
-    root.style.setProperty('--accent-primary-hover', darkenHex(primaryColor));
-    root.style.setProperty('--accent-primary-glow', `rgba(${r}, ${g}, ${b}, 0.12)`);
-    root.style.setProperty('--accent-primary-light', `rgba(${r}, ${g}, ${b}, 0.08)`);
-    root.style.setProperty('--accent-secondary', secondaryColor);
-    root.style.setProperty('--accent-secondary-glow', `rgba(${sr}, ${sg}, ${sb}, 0.10)`);
-    root.style.setProperty('--shadow-focus', `0 0 0 3px rgba(${r}, ${g}, ${b}, 0.20)`);
-  }, [primaryColor, secondaryColor]);
-
-  const allDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const allDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const sports = ['Fútbol', 'Basketball', 'Ciclismo', 'Natación', 'Voleibol', 'Atletismo', 'Tenis', 'Artes Marciales'];
 
-  const toggleDay = (day) => {
-    setTrainingDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+  const updateCategoryField = (catId, field, value) => {
+    setCategories(prev => prev.map(c => c.id === catId ? { ...c, [field]: value } : c));
+  };
+
+  const toggleCategoryDay = (catId, day) => {
+    setCategories(prev => prev.map(c => {
+      if (c.id !== catId) return c;
+      const days = c.trainingDays.includes(day)
+        ? c.trainingDays.filter(d => d !== day)
+        : [...c.trainingDays, day];
+      return { ...c, trainingDays: days };
+    }));
   };
 
   const addCategory = () => {
@@ -71,6 +63,9 @@ export default function Settings() {
         name: newCategoryName,
         fee: parseInt(newCategoryFee),
         color: colors[prev.length % colors.length],
+        trainingDays: ['Lun', 'Mié', 'Vie'],
+        trainingStart: '16:00',
+        trainingEnd: '18:00',
       },
     ]);
     setNewCategoryName('');
@@ -81,6 +76,20 @@ export default function Settings() {
     setCategories(prev => prev.filter(c => c.id !== catId));
   };
 
+  // ===== LIVE COLOR PREVIEW =====
+  useEffect(() => {
+    const root = document.documentElement;
+    const { r, g, b } = hexToRgb(primaryColor);
+    const { r: sr, g: sg, b: sb } = hexToRgb(secondaryColor);
+    root.style.setProperty('--accent-primary', primaryColor);
+    root.style.setProperty('--accent-primary-hover', darkenHex(primaryColor));
+    root.style.setProperty('--accent-primary-glow', `rgba(${r}, ${g}, ${b}, 0.12)`);
+    root.style.setProperty('--accent-primary-light', `rgba(${r}, ${g}, ${b}, 0.08)`);
+    root.style.setProperty('--accent-secondary', secondaryColor);
+    root.style.setProperty('--accent-secondary-glow', `rgba(${sr}, ${sg}, ${sb}, 0.10)`);
+    root.style.setProperty('--shadow-focus', `0 0 0 3px rgba(${r}, ${g}, ${b}, 0.20)`);
+  }, [primaryColor, secondaryColor]);
+
   const handleSave = () => {
     updateSchoolSettings({
       name: schoolName,
@@ -89,9 +98,6 @@ export default function Settings() {
       phone,
       primaryColor,
       secondaryColor,
-      trainingDays,
-      trainingStart,
-      trainingEnd,
       categories,
     });
   };
@@ -196,38 +202,62 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Categories */}
+        {/* Categories with Schedules */}
         <div className="settings-section">
-          <h3 className="settings-section__title">📋 Categorías / Grupos</h3>
-          <div className="categories-list">
-            {categories.map(cat => (
-              <div className="category-item" key={cat.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      background: cat.color,
-                    }}
-                  />
-                  <span className="category-item__name">{cat.name}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    — ${cat.fee}/mes
-                  </span>
-                </div>
-                <div className="category-item__actions">
-                  <button
-                    className="btn btn--icon btn--ghost"
-                    onClick={() => removeCategory(cat.id)}
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
+          <h3 className="settings-section__title">📋 Categorías y Horarios</h3>
+
+          {categories.map(cat => (
+            <div key={cat.id} className="card" style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, flex: 1 }}>{cat.name}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>${cat.fee}/mes</span>
+                <button className="btn btn--icon btn--ghost" onClick={() => removeCategory(cat.id)} title="Eliminar">🗑️</button>
+              </div>
+
+              <div style={{ marginBottom: 'var(--space-sm)' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  Días de entrenamiento
+                </label>
+                <div className="day-checkboxes">
+                  {allDays.map(day => (
+                    <label className="day-checkbox" key={day}>
+                      <input
+                        type="checkbox"
+                        checked={cat.trainingDays.includes(day)}
+                        onChange={() => toggleCategoryDay(cat.id, day)}
+                      />
+                      <span>{day}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="time-inputs">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '0.75rem' }}>Inicio</label>
+                  <input
+                    className="form-input"
+                    type="time"
+                    value={cat.trainingStart}
+                    onChange={e => updateCategoryField(cat.id, 'trainingStart', e.target.value)}
+                  />
+                </div>
+                <span style={{ paddingTop: '18px' }}>—</span>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '0.75rem' }}>Fin</label>
+                  <input
+                    className="form-input"
+                    type="time"
+                    value={cat.trainingEnd}
+                    onChange={e => updateCategoryField(cat.id, 'trainingEnd', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Add new category */}
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-md)', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Nombre</label>
@@ -251,49 +281,6 @@ export default function Settings() {
             <button className="btn btn--secondary" onClick={addCategory} style={{ marginBottom: '0' }}>
               ➕ Agregar
             </button>
-          </div>
-        </div>
-
-        {/* Training Schedule */}
-        <div className="settings-section">
-          <h3 className="settings-section__title">🕐 Horarios de Entrenamiento</h3>
-          <div style={{ marginBottom: 'var(--space-md)' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
-              Días de entrenamiento
-            </label>
-            <div className="day-checkboxes">
-              {allDays.map(day => (
-                <label className="day-checkbox" key={day}>
-                  <input
-                    type="checkbox"
-                    checked={trainingDays.includes(day)}
-                    onChange={() => toggleDay(day)}
-                  />
-                  <span>{day}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="time-inputs">
-            <div className="form-group">
-              <label>Hora Inicio</label>
-              <input
-                className="form-input"
-                type="time"
-                value={trainingStart}
-                onChange={e => setTrainingStart(e.target.value)}
-              />
-            </div>
-            <span style={{ paddingTop: '24px' }}>—</span>
-            <div className="form-group">
-              <label>Hora Fin</label>
-              <input
-                className="form-input"
-                type="time"
-                value={trainingEnd}
-                onChange={e => setTrainingEnd(e.target.value)}
-              />
-            </div>
           </div>
         </div>
       </div>

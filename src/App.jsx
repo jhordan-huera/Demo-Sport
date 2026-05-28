@@ -6,6 +6,7 @@ import Students from './pages/Students';
 import StudentProfile from './pages/StudentProfile';
 import Attendance from './pages/Attendance';
 import Payments from './pages/Payments';
+import Coaches from './pages/Coaches';
 import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
@@ -31,6 +32,14 @@ function LoginRoute() {
     return <Navigate to="/dashboard" replace />;
   }
   return <Login />;
+}
+
+function DirectorRoute({ children }) {
+  const { userRole } = useApp();
+  if (userRole !== 'director') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
 }
 
 function AppRoutes() {
@@ -60,8 +69,9 @@ function AppRoutes() {
           <Route path="/students" element={<Students />} />
           <Route path="/students/:id" element={<StudentProfile />} />
           <Route path="/attendance" element={<Attendance />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/coaches" element={<DirectorRoute><Coaches /></DirectorRoute>} />
+          <Route path="/payments" element={<DirectorRoute><Payments /></DirectorRoute>} />
+          <Route path="/settings" element={<DirectorRoute><Settings /></DirectorRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         <Toast />

@@ -14,14 +14,11 @@ const MOCK_SCHOOLS = [
     address: 'Av. Principal 123, Ibarra',
     primaryColor: '#1B73E8',
     secondaryColor: '#0D47A1',
-    trainingDays: ['Lun', 'Mié', 'Vie'],
-    trainingStart: '16:00',
-    trainingEnd: '18:00',
     categories: [
-      { id: 'sub8', name: 'Sub-8', fee: 20, color: '#0891B2' },
-      { id: 'sub10', name: 'Sub-10', fee: 25, color: '#1B73E8' },
-      { id: 'sub12', name: 'Sub-12', fee: 25, color: '#0D9F6F' },
-      { id: 'sub14', name: 'Sub-14', fee: 30, color: '#E8A317' },
+      { id: 'sub8', name: 'Sub-8', fee: 20, color: '#0891B2', trainingDays: ['Lun', 'Mié'], trainingStart: '15:00', trainingEnd: '16:30' },
+      { id: 'sub10', name: 'Sub-10', fee: 25, color: '#1B73E8', trainingDays: ['Mar', 'Jue'], trainingStart: '15:00', trainingEnd: '16:30' },
+      { id: 'sub12', name: 'Sub-12', fee: 25, color: '#0D9F6F', trainingDays: ['Lun', 'Mié', 'Vie'], trainingStart: '16:30', trainingEnd: '18:00' },
+      { id: 'sub14', name: 'Sub-14', fee: 30, color: '#E8A317', trainingDays: ['Mar', 'Jue', 'Sáb'], trainingStart: '16:30', trainingEnd: '18:00' },
     ],
   },
   {
@@ -36,14 +33,42 @@ const MOCK_SCHOOLS = [
     address: 'Calle Bolívar 456, Otavalo',
     primaryColor: '#FF6B35',
     secondaryColor: '#FFD740',
-    trainingDays: ['Mar', 'Jue', 'Sáb'],
-    trainingStart: '15:00',
-    trainingEnd: '17:00',
     categories: [
-      { id: 'mini', name: 'Mini (6-8)', fee: 25, color: '#0891B2' },
-      { id: 'infantil', name: 'Infantil (9-11)', fee: 30, color: '#D96716' },
-      { id: 'juvenil', name: 'Juvenil (12-15)', fee: 35, color: '#0D9F6F' },
+      { id: 'mini', name: 'Mini (6-8)', fee: 25, color: '#0891B2', trainingDays: ['Lun', 'Mié', 'Vie'], trainingStart: '15:00', trainingEnd: '16:30' },
+      { id: 'infantil', name: 'Infantil (9-11)', fee: 30, color: '#D96716', trainingDays: ['Mar', 'Jue'], trainingStart: '15:00', trainingEnd: '16:30' },
+      { id: 'juvenil', name: 'Juvenil (12-15)', fee: 35, color: '#0D9F6F', trainingDays: ['Lun', 'Mié', 'Vie'], trainingStart: '16:30', trainingEnd: '18:00' },
     ],
+  },
+];
+
+// ===== MOCK COACHES (per school) =====
+const MOCK_COACHES = [
+  {
+    id: 'coach1',
+    schoolId: 'tigres',
+    name: 'Roberto Silva',
+    email: 'entrenador@tigresfc.com',
+    password: 'demo123',
+    assignedCategories: ['sub8', 'sub10'],
+    phone: '0991122334',
+  },
+  {
+    id: 'coach2',
+    schoolId: 'tigres',
+    name: 'Andrea Gómez',
+    email: 'andrea@tigresfc.com',
+    password: 'demo123',
+    assignedCategories: ['sub12', 'sub14'],
+    phone: '0995566778',
+  },
+  {
+    id: 'coach3',
+    schoolId: 'halcones',
+    name: 'Luis Martínez',
+    email: 'entrenador@halcones.com',
+    password: 'demo123',
+    assignedCategories: ['mini', 'infantil'],
+    phone: '0993344556',
   },
 ];
 
@@ -83,15 +108,16 @@ const STUDENTS_BY_SCHOOL = {
 };
 
 // ===== ATTENDANCE MOCK (last 30 days) =====
-function generateAttendance(students, trainingDays) {
+function generateAttendance(students, categories) {
   const dayMap = { 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6, 'Dom': 0 };
-  const trainingDayNumbers = trainingDays.map(d => dayMap[d]);
   const records = {};
   const today = new Date(2026, 4, 27); // May 27, 2026
 
   students.forEach(student => {
+    const cat = categories.find(c => c.id === student.categoryId);
+    const trainingDayNumbers = (cat?.trainingDays || []).map(d => dayMap[d]);
     records[student.id] = {};
-    for (let i = 1; i < 30; i++) {  // Start from 1 to avoid today
+    for (let i = 1; i < 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dayOfWeek = date.getDay();
@@ -182,6 +208,8 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentSchool, setCurrentSchool] = useState(null);
+  const [userRole, setUserRole] = useState(null); // 'director' | 'coach'
+  const [currentUser, setCurrentUser] = useState(null); // { name, email, assignedCategories? }
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [payments, setPayments] = useState({});
@@ -227,27 +255,59 @@ export function AppProvider({ children }) {
 
   // ===== AUTH =====
   const login = useCallback((email, password) => {
+    // Try admin login first
     const school = MOCK_SCHOOLS.find(
       s => s.email === email && s.password === password
     );
     if (school) {
       const schoolStudents = JSON.parse(JSON.stringify(STUDENTS_BY_SCHOOL[school.id] || []));
-      const schoolAttendance = generateAttendance(schoolStudents, school.trainingDays);
+      const schoolAttendance = generateAttendance(schoolStudents, school.categories);
       const schoolPayments = generatePayments(schoolStudents, school.categories);
 
       setIsLoggedIn(true);
       setCurrentSchool({ ...school });
+      setUserRole('director');
+      setCurrentUser({ name: school.adminName, email: school.email });
       setStudents(schoolStudents);
       setAttendance(schoolAttendance);
       setPayments(schoolPayments);
       return { success: true };
     }
+
+    // Try coach login
+    const coach = MOCK_COACHES.find(
+      c => c.email === email && c.password === password
+    );
+    if (coach) {
+      const coachSchool = MOCK_SCHOOLS.find(s => s.id === coach.schoolId);
+      if (coachSchool) {
+        const schoolStudents = JSON.parse(JSON.stringify(STUDENTS_BY_SCHOOL[coachSchool.id] || []));
+        const schoolAttendance = generateAttendance(schoolStudents, coachSchool.categories);
+        const schoolPayments = generatePayments(schoolStudents, coachSchool.categories);
+
+        setIsLoggedIn(true);
+        setCurrentSchool({ ...coachSchool });
+        setUserRole('coach');
+        setCurrentUser({
+          name: coach.name,
+          email: coach.email,
+          assignedCategories: coach.assignedCategories,
+        });
+        setStudents(schoolStudents);
+        setAttendance(schoolAttendance);
+        setPayments(schoolPayments);
+        return { success: true };
+      }
+    }
+
     return { success: false, error: 'Correo o contraseña incorrecta' };
   }, []);
 
   const logout = useCallback(() => {
     setIsLoggedIn(false);
     setCurrentSchool(null);
+    setUserRole(null);
+    setCurrentUser(null);
     setStudents([]);
     setAttendance({});
     setPayments({});
@@ -409,35 +469,33 @@ export function AppProvider({ children }) {
     };
   }, [students, attendance, payments, currentSchool]);
 
-  // Weekly attendance for chart
-  const weeklyAttendance = useMemo(() => {
+  // Attendance per category for chart
+  const categoryAttendance = useMemo(() => {
     if (!currentSchool) return [];
-    const dayMap = { 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6, 'Dom': 0 };
-    const result = [];
+    const categories = currentSchool.categories || [];
 
-    currentSchool.trainingDays.forEach(day => {
-      const dayNum = dayMap[day];
+    return categories.map(cat => {
+      const catStudents = activeStudents.filter(s => s.categoryId === cat.id);
       let present = 0;
       let total = 0;
 
-      activeStudents.forEach(s => {
+      catStudents.forEach(s => {
         const records = attendance[s.id] || {};
-        Object.entries(records).forEach(([dateKey, wasPresent]) => {
-          const d = new Date(dateKey + 'T12:00:00'); // Avoid timezone issues
-          if (d.getDay() === dayNum) {
-            total++;
-            if (wasPresent) present++;
-          }
+        Object.values(records).forEach(wasPresent => {
+          total++;
+          if (wasPresent) present++;
         });
       });
 
-      result.push({
-        day,
+      return {
+        name: cat.name,
+        color: cat.color,
+        id: cat.id,
         rate: total > 0 ? Math.round((present / total) * 100) : 0,
-      });
+        students: catStudents.length,
+        days: (cat.trainingDays || []).join(', '),
+      };
     });
-
-    return result;
   }, [currentSchool, activeStudents, attendance]);
 
   // Alerts
@@ -472,9 +530,12 @@ export function AppProvider({ children }) {
   const value = {
     isLoggedIn,
     currentSchool,
+    userRole,
+    currentUser,
     login,
     logout,
     mockSchools: MOCK_SCHOOLS,
+    mockCoaches: MOCK_COACHES,
     students,
     activeStudents,
     addStudent,
@@ -487,7 +548,7 @@ export function AppProvider({ children }) {
     registerPayment,
     updateSchoolSettings,
     stats,
-    weeklyAttendance,
+    categoryAttendance,
     alerts,
     toast,
     showToast,

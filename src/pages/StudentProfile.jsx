@@ -17,7 +17,8 @@ function getAvatarColor(name) {
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { students, currentSchool, attendance, payments } = useApp();
+  const { students, currentSchool, attendance, payments, userRole } = useApp();
+  const isCoach = userRole === 'coach';
 
   const student = students.find(s => s.id === id);
   const category = currentSchool?.categories.find(c => c.id === student?.categoryId);
@@ -64,7 +65,8 @@ export default function StudentProfile() {
     }
 
     const dayMap = { 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6, 'Dom': 0 };
-    const trainingDayNumbers = (currentSchool?.trainingDays || []).map(d => dayMap[d]);
+    const studentCat = (currentSchool?.categories || []).find(c => c.id === student?.categoryId);
+    const trainingDayNumbers = (studentCat?.trainingDays || []).map(d => dayMap[d]);
 
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d);
@@ -186,38 +188,40 @@ export default function StudentProfile() {
           </div>
         </div>
 
-        {/* Payment History */}
-        <div className="card card--no-hover">
-          <div className="card__title">💰 Historial de Pagos</div>
-          <div className="table-container" style={{ border: 'none', background: 'none' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th>Estado</th>
-                  <th>Monto</th>
-                  <th>Fecha</th>
-                  <th>Método</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paymentHistory.map(p => (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 600 }}>{p.label}</td>
-                    <td>
-                      <span className={`badge badge--${statusClasses[p.status]}`}>
-                        {statusLabels[p.status]}
-                      </span>
-                    </td>
-                    <td>${p.amount}</td>
-                    <td>{p.date || '—'}</td>
-                    <td>{p.method || '—'}</td>
+        {/* Payment History - Director only */}
+        {!isCoach && (
+          <div className="card card--no-hover">
+            <div className="card__title">💰 Historial de Pagos</div>
+            <div className="table-container" style={{ border: 'none', background: 'none' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th>Estado</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Método</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paymentHistory.map(p => (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>{p.label}</td>
+                      <td>
+                        <span className={`badge badge--${statusClasses[p.status]}`}>
+                          {statusLabels[p.status]}
+                        </span>
+                      </td>
+                      <td>${p.amount}</td>
+                      <td>{p.date || '—'}</td>
+                      <td>{p.method || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
