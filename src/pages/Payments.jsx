@@ -18,6 +18,7 @@ export default function Payments() {
   const { activeStudents, currentSchool, payments, registerPayment } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null); // for history view
 
   // Modal form
   const [payStudentId, setPayStudentId] = useState('');
@@ -30,6 +31,8 @@ export default function Payments() {
     { id: '2026-05', label: 'Mayo 2026' },
     { id: '2026-04', label: 'Abril 2026' },
     { id: '2026-03', label: 'Marzo 2026' },
+    { id: '2026-02', label: 'Febrero 2026' },
+    { id: '2026-01', label: 'Enero 2026' },
   ];
 
   // Financial summary
@@ -75,6 +78,10 @@ export default function Payments() {
     setShowModal(false);
     setPayStudentId('');
     setPayObservation('');
+    // If we have a selected student open, refresh their view
+    if (selectedStudent && payStudentId === selectedStudent.id) {
+      setSelectedStudent({ ...selectedStudent });
+    }
   };
 
   const openPaymentModal = (studentId, monthId) => {
@@ -90,6 +97,168 @@ export default function Payments() {
   const circumference = 2 * Math.PI * 26;
   const dashOffset = circumference - (financialSummary.collectionRate / 100) * circumference;
 
+  // ============ HISTORY VIEW ============
+  if (selectedStudent) {
+    const student = selectedStudent;
+    const cat = categories.find(c => c.id === student.categoryId);
+    const fee = cat?.fee || 25;
+
+    return (
+      <div>
+        <div className="page-header">
+          <div className="page-header__left">
+            <button
+              className="btn btn--secondary btn--sm"
+              onClick={() => setSelectedStudent(null)}
+              style={{ marginBottom: 'var(--space-sm)' }}
+            >
+              ← Volver a Pagos
+            </button>
+            <h1 className="page-header__title">Historial de Pagos</h1>
+          </div>
+        </div>
+
+        {/* Student Info Card */}
+        <div className="card card--no-hover" style={{ marginBottom: 'var(--space-lg)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
+            <div
+              className="table__avatar"
+              style={{ background: getAvatarColor(student.name), width: 56, height: 56, fontSize: '1rem' }}
+            >
+              {getInitials(student.name)}
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {student.name}
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
+                <span className="badge badge--info" style={cat ? { background: `${cat.color}20`, color: cat.color } : {}}>
+                  {cat?.name || student.categoryId}
+                </span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Mensualidad: <strong>${fee}</strong>
+                </span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+                {months.filter(m => payments[student.id]?.[m.id]?.status === 'paid').length}/{months.length}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Meses Pagados
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment History Timeline */}
+        <div className="pay-history">
+          {months.map((month, idx) => {
+            const p = payments[student.id]?.[month.id];
+            const status = p?.status || 'pending';
+            const isPaid = status === 'paid';
+
+            return (
+              <div
+                className={`pay-history__item ${isPaid ? 'pay-history__item--paid' : status === 'overdue' ? 'pay-history__item--overdue' : 'pay-history__item--pending'}`}
+                key={month.id}
+                style={{ animationDelay: `${idx * 0.06}s` }}
+              >
+                <div className="pay-history__indicator">
+                  <div className={`pay-history__dot ${isPaid ? 'pay-history__dot--paid' : status === 'overdue' ? 'pay-history__dot--overdue' : 'pay-history__dot--pending'}`}>
+                    {isPaid ? '✓' : status === 'overdue' ? '!' : '•'}
+                  </div>
+                  {idx < months.length - 1 && <div className="pay-history__line" />}
+                </div>
+                <div className="pay-history__content">
+                  <div className="pay-history__header">
+                    <div>
+                      <div className="pay-history__month">{month.label}</div>
+                      <div className="pay-history__fee">${fee}</div>
+                    </div>
+                    <div className="pay-history__status">
+                      {isPaid ? (
+                        <span className="badge badge--success">✅ Pagado</span>
+                      ) : (
+                        <button
+                          className={`btn btn--sm ${status === 'overdue' ? 'btn--danger' : 'btn--primary'}`}
+                          onClick={() => openPaymentModal(student.id, month.id)}
+                        >
+                          💳 Registrar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {isPaid && p && (
+                    <div className="pay-history__details">
+                      <div className="pay-history__detail">
+                        <span>📅 Fecha:</span> <strong>{p.date}</strong>
+                      </div>
+                      <div className="pay-history__detail">
+                        <span>💳 Método:</span> <strong>{p.method}</strong>
+                      </div>
+                      {p.observation && (
+                        <div className="pay-history__detail">
+                          <span>📝 Nota:</span> {p.observation}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Payment Modal (same as main view) */}
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Registrar Pago"
+          footer={
+            <>
+              <button className="btn btn--secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn--primary" onClick={handleRegisterPayment}>
+                💳 Registrar Pago
+              </button>
+            </>
+          }
+        >
+          <div className="form-group">
+            <label>Estudiante</label>
+            <input className="form-input" value={student.name} disabled />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Mes</label>
+              <select className="form-select" value={payMonth} onChange={e => setPayMonth(e.target.value)}>
+                {months.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Método de Pago</label>
+              <select className="form-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Tarjeta">Tarjeta</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Observaciones (opcional)</label>
+            <textarea
+              className="form-textarea"
+              placeholder="Notas sobre el pago..."
+              value={payObservation}
+              onChange={e => setPayObservation(e.target.value)}
+            />
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
+  // ============ MAIN VIEW ============
   return (
     <div>
       <div className="page-header">
@@ -169,35 +338,38 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* Payments Table — Desktop */}
+      {/* Payments Table — Desktop (simplified) */}
       <div className="table-container payments-desktop">
         <table className="table">
           <thead>
             <tr>
               <th>Estudiante</th>
               <th>Categoría</th>
-              {months.map(m => <th key={m.id}>{m.label}</th>)}
               <th>Mensualidad</th>
+              <th>Estado Mayo 2026</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredStudents.map(student => {
               const cat = categories.find(c => c.id === student.categoryId);
-              const currentStatus = payments[student.id]?.['2026-05']?.status || 'pending';
+              const currentPayment = payments[student.id]?.['2026-05'];
+              const currentStatus = currentPayment?.status || 'pending';
               const isPaid = currentStatus === 'paid';
 
               return (
                 <tr key={student.id}>
                   <td>
-                    <div className="table__user">
+                    <div className="table__user" style={{ cursor: 'pointer' }} onClick={() => setSelectedStudent(student)}>
                       <div
                         className="table__avatar"
                         style={{ background: getAvatarColor(student.name) }}
                       >
                         {getInitials(student.name)}
                       </div>
-                      <span style={{ fontWeight: 600 }}>{student.name}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                        {student.name}
+                      </span>
                     </div>
                   </td>
                   <td>
@@ -205,18 +377,17 @@ export default function Payments() {
                       {cat?.name || student.categoryId}
                     </span>
                   </td>
-                  {months.map(m => {
-                    const p = payments[student.id]?.[m.id];
-                    const status = p?.status || 'pending';
-                    return (
-                      <td key={m.id}>
-                        <span className={`badge badge--${statusClasses[status]}`}>
-                          {statusLabels[status]}
-                        </span>
-                      </td>
-                    );
-                  })}
                   <td style={{ fontWeight: 600 }}>${cat?.fee || 25}</td>
+                  <td>
+                    <span className={`badge badge--${statusClasses[currentStatus]}`}>
+                      {statusLabels[currentStatus]}
+                    </span>
+                    {isPaid && currentPayment && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                        {currentPayment.date}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <div className="table__actions">
                       {isPaid ? (
@@ -254,7 +425,7 @@ export default function Payments() {
 
           return (
             <div className="payment-card" key={student.id} style={payStatus === 'paid' ? { borderLeft: '3px solid var(--color-success)' } : payStatus === 'overdue' ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
-              <div className="payment-card__header">
+              <div className="payment-card__header" onClick={() => setSelectedStudent(student)} style={{ cursor: 'pointer' }}>
                 <div
                   className="table__avatar"
                   style={{ background: getAvatarColor(student.name), width: 36, height: 36, fontSize: '0.7rem' }}
@@ -262,7 +433,9 @@ export default function Payments() {
                   {getInitials(student.name)}
                 </div>
                 <div className="payment-card__info">
-                  <div className="payment-card__name">{student.name}</div>
+                  <div className="payment-card__name" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                    {student.name}
+                  </div>
                   <span className="badge badge--info" style={cat ? { background: `${cat.color}20`, color: cat.color, fontSize: '0.65rem', padding: '2px 6px' } : {}}>
                     {cat?.name || student.categoryId}
                   </span>
@@ -276,18 +449,6 @@ export default function Payments() {
                   <span className="payment-card__label">Mensualidad</span>
                   <span className="payment-card__value">${cat?.fee || 25}</span>
                 </div>
-                {payStatus === 'paid' && currentPayment && (
-                  <div className="payment-card__row">
-                    <span className="payment-card__label">Método</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{currentPayment.method}</span>
-                  </div>
-                )}
-                {payStatus === 'paid' && currentPayment && (
-                  <div className="payment-card__row">
-                    <span className="payment-card__label">Fecha</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentPayment.date}</span>
-                  </div>
-                )}
               </div>
               {payStatus === 'paid' ? (
                 <div style={{ width: '100%', marginTop: 'var(--space-sm)', textAlign: 'center', padding: '8px', background: 'var(--color-success-light)', borderRadius: 'var(--radius-md)', color: 'var(--color-success)', fontWeight: 700, fontSize: '0.8rem' }}>

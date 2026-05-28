@@ -1354,6 +1354,158 @@ ul, ol { list-style: none; }
   }
 }
 
+/* ===== Payments — Cards & History ===== */
+.payments-mobile { display: none; }
+
+.payment-card {
+  background: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+.payment-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.payment-card__info { flex: 1; min-width: 0; }
+.payment-card__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.payment-card__details {
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--space-sm);
+}
+.payment-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.payment-card__label { font-size: 0.75rem; color: var(--text-muted); }
+.payment-card__value { font-size: 0.85rem; font-weight: 700; }
+
+/* ===== Payment History Timeline ===== */
+.pay-history {
+  display: flex;
+  flex-direction: column;
+}
+
+.pay-history__item {
+  display: flex;
+  gap: var(--space-md);
+  animation: fadeSlideIn 0.3s ease both;
+}
+
+.pay-history__indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 32px;
+}
+
+.pay-history__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.pay-history__dot--paid {
+  background: #D1FAE5;
+  color: #059669;
+  border: 2px solid #059669;
+}
+.pay-history__dot--pending {
+  background: #FEF3C7;
+  color: #D97706;
+  border: 2px solid #D97706;
+}
+.pay-history__dot--overdue {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 2px solid #DC2626;
+}
+
+.pay-history__line {
+  width: 2px;
+  flex: 1;
+  background: var(--border-light);
+  min-height: 16px;
+}
+
+.pay-history__content {
+  flex: 1;
+  background: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+  transition: all var(--transition-base);
+}
+.pay-history__content:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.pay-history__item--paid .pay-history__content {
+  border-left: 3px solid #059669;
+}
+.pay-history__item--overdue .pay-history__content {
+  border-left: 3px solid #DC2626;
+  background: #FFF5F5;
+}
+.pay-history__item--pending .pay-history__content {
+  border-left: 3px solid #D97706;
+}
+
+.pay-history__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.pay-history__month {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pay-history__fee {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pay-history__details {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--border-light);
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+.pay-history__detail {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.pay-history__detail span {
+  color: var(--text-muted);
+}
+.pay-history__detail strong {
+  color: var(--text-primary);
+}
+
 /* ===== Student Profile ===== */
 .profile-header {
   display: flex;
