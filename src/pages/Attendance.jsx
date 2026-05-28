@@ -17,7 +17,7 @@ function getAvatarColor(name) {
 export default function Attendance() {
   const { activeStudents, currentSchool, attendance, saveAttendanceForGroup, userRole, currentUser } = useApp();
   const isCoach = userRole === 'coach';
-  const coachCategories = currentUser?.assignedCategories || [];
+  const coachCategories = useMemo(() => currentUser?.assignedCategories || [], [currentUser]);
   const [searchParams] = useSearchParams();
   const urlCategory = searchParams.get('category');
   const [activeTab, setActiveTab] = useState('roll');
@@ -36,7 +36,6 @@ export default function Attendance() {
 
   const filteredStudents = useMemo(() => {
     let base = activeStudents;
-    // Coaches: filter to their categories first
     if (isCoach) base = base.filter(s => coachCategories.includes(s.categoryId));
     if (selectedCategory === 'all') return base;
     return base.filter(s => s.categoryId === selectedCategory);
@@ -45,17 +44,13 @@ export default function Attendance() {
   // Initialize roll call when category, date, or students change
   useEffect(() => {
     const initial = {};
-    // Compute inline to avoid stale reference loops
-    let base = activeStudents;
-    if (isCoach) base = base.filter(s => coachCategories.includes(s.categoryId));
-    if (selectedCategory !== 'all') base = base.filter(s => s.categoryId === selectedCategory);
-
-    base.forEach(s => {
+    filteredStudents.forEach(s => {
       const existing = attendance[s.id]?.[selectedDate];
       initial[s.id] = existing !== undefined ? existing : false;
     });
     setRollCall(initial);
-  }, [activeStudents, selectedCategory, selectedDate, attendance, isCoach, coachCategories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, selectedDate]);
 
   const togglePresent = (studentId) => {
     setRollCall(prev => ({ ...prev, [studentId]: !prev[studentId] }));

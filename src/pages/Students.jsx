@@ -18,7 +18,7 @@ function getAvatarColor(name) {
 export default function Students() {
   const { students, currentSchool, addStudent, updateStudent, toggleStudentActive, payments, attendance, userRole, currentUser } = useApp();
   const isCoach = userRole === 'coach';
-  const coachCategories = currentUser?.assignedCategories || [];
+  const coachCategories = useMemo(() => currentUser?.assignedCategories || [], [currentUser]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlCategory = searchParams.get('category');
