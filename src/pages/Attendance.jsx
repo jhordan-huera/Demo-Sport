@@ -42,15 +42,20 @@ export default function Attendance() {
     return base.filter(s => s.categoryId === selectedCategory);
   }, [activeStudents, selectedCategory, isCoach, coachCategories]);
 
-  // Initialize roll call when category, date, or students change — useEffect not useMemo!
+  // Initialize roll call when category, date, or students change
   useEffect(() => {
     const initial = {};
-    filteredStudents.forEach(s => {
+    // Compute inline to avoid stale reference loops
+    let base = activeStudents;
+    if (isCoach) base = base.filter(s => coachCategories.includes(s.categoryId));
+    if (selectedCategory !== 'all') base = base.filter(s => s.categoryId === selectedCategory);
+
+    base.forEach(s => {
       const existing = attendance[s.id]?.[selectedDate];
       initial[s.id] = existing !== undefined ? existing : false;
     });
     setRollCall(initial);
-  }, [filteredStudents, selectedDate, attendance]);
+  }, [activeStudents, selectedCategory, selectedDate, attendance, isCoach, coachCategories]);
 
   const togglePresent = (studentId) => {
     setRollCall(prev => ({ ...prev, [studentId]: !prev[studentId] }));
