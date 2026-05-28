@@ -15,7 +15,7 @@ function getAvatarColor(name) {
 }
 
 export default function Attendance() {
-  const { activeStudents, currentSchool, attendance, saveAttendanceForGroup, userRole, currentUser } = useApp();
+  const { activeStudents, currentSchool, attendance, markAttendance, userRole, currentUser } = useApp();
   const isCoach = userRole === 'coach';
   const coachCategories = useMemo(() => currentUser?.assignedCategories || [], [currentUser]);
   const [searchParams] = useSearchParams();
@@ -54,11 +54,9 @@ export default function Attendance() {
   }, [selectedCategory, selectedDate]);
 
   const togglePresent = (studentId) => {
-    setRollCall(prev => ({ ...prev, [studentId]: !prev[studentId] }));
-  };
-
-  const handleSaveAttendance = () => {
-    saveAttendanceForGroup(rollCall, selectedDate);
+    const newValue = !rollCall[studentId];
+    setRollCall(prev => ({ ...prev, [studentId]: newValue }));
+    markAttendance(studentId, selectedDate, newValue);
   };
 
   const presentCount = Object.values(rollCall).filter(Boolean).length;
@@ -246,13 +244,7 @@ export default function Attendance() {
             </div>
           )}
 
-          {filteredStudents.length > 0 && (
-            <div className="att-save">
-              <button className="btn btn--primary btn--lg" onClick={handleSaveAttendance}>
-                💾 Guardar Asistencia ({presentCount}/{filteredStudents.length})
-              </button>
-            </div>
-          )}
+
         </>
       )}
 
